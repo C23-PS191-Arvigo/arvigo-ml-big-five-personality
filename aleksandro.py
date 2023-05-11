@@ -1,78 +1,78 @@
-from flask import Flask, request
-import tensorflow as tf
-import base64
+from flask import Flask, request, jsonify
 import joblib
 import numpy as np
-
-def load_image_from_base64(base64_string, target_size=(100, 100)):
-    img_bytes = base64.b64decode(base64_string)
-    img = tf.io.decode_image(img_bytes, channels=3)
-    img = tf.image.resize(img, target_size)
-    img = img / 255.0
-    img = tf.expand_dims(img, axis=0)
-    return img
-
-def load_model(model_path):
-    model = joblib.load(model_path)
-    return model
-
-def predict_image(model, img):
-    # Adjust this function based on the specific requirements of your joblib model
-    pred = model.predict(img)
-    return pred  # It's an array within array, hence we need to extract it
-
-def classify_face_shape(value):
-    shapes = ['circle', 'heart', 'oblong', 'oval', 'square', 'triangle']
-    probabilities = value.tolist()
-
-    # Get the sorted probabilities array that would sort the probabilities in descending order
-    sorted_probabilities_array = np.argsort(probabilities)[::-1]
-
-    # Get the highest and second highest probabilities
-    highest_probability = probabilities[sorted_probabilities_array[0]]
-    second_highest_probability = probabilities[sorted_probabilities_array[1]]
-
-    # Get the corresponding shapes using the sorted probabilities array
-    highest_shape = shapes[sorted_probabilities_array[0]]
-    second_highest_shape = shapes[sorted_probabilities_array[1]]
-
-    return {
-        'shape': highest_shape,
-        'probability': highest_probability,
-        'second_shape': second_highest_shape,
-        'second_probability': second_highest_probability
-    }
-
+import random
 
 app = Flask(__name__)
+model = joblib.load("model_kmeans.joblib")
 
-@app.route("/")
-def hello_world():
-    return "<p>Blank</p>"
+@app.route("/dummy_detect_personality", methods=["POST"])
+def dummy_detect_personality():
+    if request.content_type == "application/json":
+        try:
+            data = {'EXT1': 0, 'EXT2': 0, 'EXT3': 0, 'EXT4': 0, 'EXT5': 0, 'EXT6': 0, 'EXT7': 0, 'EXT8': 0, 'EXT9': 0, 'EXT10': 0, 'EST1': 0, 'EST2': 0, 'EST3': 0, 'EST4': 0, 'EST5': 0, 'EST6': 0, 'EST7': 0, 'EST8': 0, 'EST9': 0, 'EST10': 0, 'AGR1': 0, 'AGR2': 0, 'AGR3': 0, 'AGR4': 0, 'AGR5': 0, 'AGR6': 0, 'AGR7': 0, 'AGR8': 0, 'AGR9': 0, 'AGR10': 0, 'CSN1': 0, 'CSN2': 0, 'CSN3': 0, 'CSN4': 0, 'CSN5': 0, 'CSN6': 0, 'CSN7': 0, 'CSN8': 0, 'CSN9': 0, 'CSN10': 0, 'OPN1': 0, 'OPN2': 0, 'OPN3': 0, 'OPN4': 0, 'OPN5': 0, 'OPN6': 0, 'OPN7': 0, 'OPN8': 0,
+            'OPN9': 0, 'OPN10': 0}
 
-@app.route('/face_shape', methods=['POST'])
-def process_json():
-    content_type = request.headers.get('Content-Type')
-    if content_type == 'application/json':
-        json_data = request.get_json()
-        if json_data:
-            # param = json_data['image']
-        # return json_data
+            data = {key: random.randint(1, 5) for key in data}
+            # Convert the input data to a numpy array
+            input_data = np.array([list(data.values())], dtype=np.float64)
 
-            argument = {'EXT1': 4, 'EXT2': 2, 'EXT3': 5, 'EXT4': 4, 'EXT5': 4, 'EXT6': 4, 'EXT7': 1, 'EXT8': 5, 'EXT9': 2, 'EXT10': 4, 'EST1': 1, 'EST2': 2, 'EST3': 3, 'EST4': 4, 'EST5': 3, 'EST6': 2, 'EST7': 1, 'EST8': 3, 'EST9': 3, 'EST10': 1, 'AGR1': 2, 'AGR2': 1, 'AGR3': 1, 'AGR4': 2, 'AGR5': 3, 'AGR6': 5, 'AGR7': 1, 'AGR8': 1, 'AGR9': 5, 'AGR10': 5, 'CSN1': 3, 'CSN2': 1, 'CSN3': 1, 'CSN4': 5, 'CSN5': 4, 'CSN6': 2, 'CSN7': 4, 'CSN8': 2, 'CSN9': 2, 'CSN10': 2, 'OPN1': 2, 'OPN2': 4, 'OPN3': 2, 'OPN4': 3, 'OPN5': 5, 'OPN6': 5, 'OPN7': 4, 'OPN8': 5, 'OPN9': 4, 'OPN10': 2}
-            # model = load_model("./model_kmeans.joblib")  # Update the file extension
-            model = joblib.load("./model_kmeans.joblib")  # Update the file extension
-            pred = model.predict(argument)
-            return str(pred)
-            # img = load_image_from_base64(param)
-            pred = predict_image(model, argument)
-            # result = classify_face_shape(pred)
+            # Perform clustering prediction
+            predictions = model.predict(input_data)
 
-            return str(pred)
-        else:
-            return 'Image data not found in the JSON payload.'
+            # Convert the predictions to a list
+            personality_traits = predictions.tolist()
+
+            # Map the predicted personality traits to their respective names
+            personality_names = ['Extraversion', 'Emotional Stability', 'Agreeableness', 'Conscientiousness', 'Openness']
+            predicted_personality = [personality_names[i] for i in personality_traits]
+
+            # Prepare the response JSON
+            response = {
+                'input': data,
+                'predicted_personality': predicted_personality
+            }
+
+            return jsonify(response)
+
+        except:
+            return jsonify({'error': 'Failed to process the request.'})
+
     else:
-        return 'Content-Type not supported!'
+        return jsonify({'error': 'Invalid content type. Expected application/json.'})
 
-if __name__ == '__main__':
-    app.run()
+@app.route("/detect_personality", methods=["POST"])
+def detect_personality():
+    if request.content_type == "application/json":
+        try:
+            data = request.get_json()
+
+            # Convert the input data to a numpy array
+            input_data = np.array([list(data.values())], dtype=np.float64)
+
+            # Perform clustering prediction
+            predictions = model.predict(input_data)
+
+            # Convert the predictions to a list
+            personality_traits = predictions.tolist()
+
+            # Map the predicted personality traits to their respective names
+            personality_names = ['Extraversion', 'Emotional Stability', 'Agreeableness', 'Conscientiousness', 'Openness']
+            predicted_personality = [personality_names[i] for i in personality_traits]
+
+            response = {
+                'predicted_personality': predicted_personality
+            }
+
+            return jsonify(response)
+
+        except:
+            return jsonify({'error': 'Failed to process the request.'})
+
+    else:
+        return jsonify({'error': 'Invalid content type. Expected application/json.'})
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+

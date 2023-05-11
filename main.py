@@ -9,12 +9,14 @@ Original file is located at
 
 import os
 import csv
-import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.cluster import KMeans
-from yellowbrick.cluster import KElbowVisualizer
+import pandas as pd
 import matplotlib.pyplot as plt
+
+from joblib import dump
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler
+from yellowbrick.cluster import KElbowVisualizer
 
 # Mount Google Drive to access dataset
 from google.colab import drive
@@ -135,8 +137,11 @@ visualizer.fit(df_scaled)
 visualizer.poof()
 
 # Fit KMeans model to the data
-kmeans = KMeans(n_clusters=5, n_init=20)
+kmeans = KMeans(n_clusters=5, n_init=100)
 kmeans.fit(df)
+
+# save model to joblib file
+dump(kmeans, 'model_kmeans.joblib')
 
 # Assign the clusters to each data point
 cluster_labels = kmeans.labels_
